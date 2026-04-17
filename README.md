@@ -21,7 +21,7 @@ SmartVector solves this by giving each vector three properties that traditional 
 ## Installation
 
 ```bash
-pip install smartvector
+pip install smartvector-rag
 ```
 
 Or install from source:
