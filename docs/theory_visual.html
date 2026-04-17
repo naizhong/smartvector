@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Smart Vector Theory — Full Proposal with Implementation</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0a0e1a; color: #e2e8f0; overflow-x: hidden; }
+
+  .header { text-align: center; padding: 36px 20px 16px; }
+  .header h1 { font-size: 2rem; background: linear-gradient(135deg, #38bdf8, #a78bfa, #f472b6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .header p { color: #64748b; margin-top: 6px; font-size: 0.95rem; }
+
+  .container { max-width: 1200px; margin: 0 auto; padding: 0 20px 40px; }
+
+  .tabs { display: flex; gap: 3px; margin-bottom: 24px; background: #131827; border-radius: 12px; padding: 4px; flex-wrap: wrap; }
+  .tab { flex: 1; min-width: 90px; padding: 10px 6px; text-align: center; border-radius: 8px; cursor: pointer; font-weight: 600; color: #64748b; transition: all 0.2s; font-size: 0.75rem; }
+  .tab:hover { color: #e2e8f0; background: #1e293b; }
+  .tab.active { background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; }
+
+  .panel { display: none; animation: fadeIn 0.3s; }
+  .panel.active { display: block; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; } }
+
+  .card { background: #131827; border-radius: 16px; padding: 24px; border: 1px solid #1e293b; margin-bottom: 16px; }
+  .card h3 { color: #a78bfa; margin-bottom: 12px; font-size: 1.05rem; }
+  .card p { color: #94a3b8; font-size: 0.88rem; line-height: 1.65; }
+
+  /* Code blocks */
+  pre.code { background: #0c1018; border: 1px solid #1e293b; border-radius: 10px; padding: 16px; overflow-x: auto; font-family: 'SF Mono','Fira Code',monospace; font-size: 0.78rem; line-height: 1.7; color: #94a3b8; margin: 12px 0; }
+  pre.code .kw { color: #c084fc; }
+  pre.code .fn { color: #38bdf8; }
+  pre.code .str { color: #4ade80; }
+  pre.code .cm { color: #475569; font-style: italic; }
+  pre.code .num { color: #fb923c; }
+  pre.code .cls { color: #fbbf24; }
+  pre.code .op { color: #f472b6; }
+  pre.code .dec { color: #f472b6; }
+
+  /* Comparison */
+  .comparison { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 16px 0; }
+  @media(max-width:700px) { .comparison { grid-template-columns: 1fr; } }
+  .comp-card { border-radius: 14px; padding: 20px; }
+  .comp-card.dumb { background: linear-gradient(135deg, #131827, #1a1020); border: 1px solid #f87171; }
+  .comp-card.smart { background: linear-gradient(135deg, #131827, #0f1a20); border: 1px solid #4ade80; }
+  .comp-card h4 { font-size: 0.95rem; margin-bottom: 10px; }
+  .comp-card p { font-size: 0.83rem; color: #94a3b8; line-height: 1.6; }
+
+  /* Properties */
+  .prop-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-top: 16px; }
+  @media(max-width:700px) { .prop-grid { grid-template-columns: 1fr; } }
+  .prop-card { border-radius: 14px; padding: 20px; border: 1px solid #1e293b; }
+  .prop-card.p1 { background: linear-gradient(150deg, #131827, #0f1a2a); border-color: #38bdf8; }
+  .prop-card.p2 { background: linear-gradient(150deg, #131827, #1a0f2a); border-color: #a78bfa; }
+  .prop-card.p3 { background: linear-gradient(150deg, #131827, #1a200f); border-color: #fbbf24; }
+  .prop-card .icon { font-size: 1.4rem; margin-bottom: 6px; }
+  .prop-card h4 { font-size: 0.95rem; margin-bottom: 8px; }
+  .prop-card p { font-size: 0.82rem; color: #94a3b8; line-height: 1.6; }
+  .prop-card .research { margin-top: 10px; padding: 10px; background: rgba(0,0,0,0.3); border-radius: 8px; font-size: 0.78rem; color: #64748b; }
+  .prop-card .research strong { color: #a5f3fc; }
+
+  /* Lifecycle */
+  .lc-stage { display: flex; gap: 16px; align-items: stretch; }
+  .lc-line { width: 48px; display: flex; flex-direction: column; align-items: center; flex-shrink: 0; }
+  .lc-dot { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 0.8rem; flex-shrink: 0; }
+  .lc-connector { flex: 1; width: 2px; margin: 0 auto; }
+  .lc-content { flex: 1; padding: 4px 0 20px; }
+  .lc-content h4 { font-size: 0.92rem; margin-bottom: 4px; }
+  .lc-content .sub { font-size: 0.76rem; color: #64748b; margin-bottom: 6px; }
+  .lc-content p { font-size: 0.83rem; color: #94a3b8; line-height: 1.55; }
+
+  .s1 .lc-dot { background: #38bdf8; color: #0a0e1a; } .s1 .lc-connector { background: linear-gradient(#38bdf8, #6366f1); }
+  .s2 .lc-dot { background: #6366f1; color: white; } .s2 .lc-connector { background: linear-gradient(#6366f1, #a78bfa); }
+  .s3 .lc-dot { background: #a78bfa; color: #0a0e1a; } .s3 .lc-connector { background: linear-gradient(#a78bfa, #f472b6); }
+  .s4 .lc-dot { background: #f472b6; color: #0a0e1a; } .s4 .lc-connector { background: linear-gradient(#f472b6, #fb923c); }
+  .s5 .lc-dot { background: #fb923c; color: #0a0e1a; }
+
+  /* Architecture diagram */
+  .arch-box { background: #0c1018; border: 1px solid #1e293b; border-radius: 12px; padding: 18px; font-family: 'SF Mono',monospace; font-size: 0.78rem; line-height: 1.9; color: #64748b; overflow-x: auto; white-space: pre; }
+  .arch-box .h { color: #a78bfa; font-weight: 700; }
+  .arch-box .c { color: #38bdf8; }
+  .arch-box .a { color: #4ade80; }
+  .arch-box .w { color: #fbbf24; }
+
+  /* Roadmap */
+  .roadmap { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-top: 16px; }
+  @media(max-width:700px) { .roadmap { grid-template-columns: 1fr; } }
+  .phase { border-radius: 14px; padding: 20px; border: 1px solid #1e293b; }
+  .phase.p1 { background: linear-gradient(150deg, #131827, #0a1a12); border-color: #4ade80; }
+  .phase.p2 { background: linear-gradient(150deg, #131827, #1a150a); border-color: #fbbf24; }
+  .phase.p3 { background: linear-gradient(150deg, #131827, #1a0a0f); border-color: #f472b6; }
+  .phase h4 { font-size: 0.9rem; margin-bottom: 4px; }
+  .phase .timeline { font-size: 0.75rem; color: #64748b; margin-bottom: 8px; }
+  .phase p { font-size: 0.82rem; color: #94a3b8; line-height: 1.5; }
+  .phase .tools { margin-top: 8px; font-size: 0.75rem; color: #a5f3fc; }
+
+  /* Simulation */
+  .sim-area { background: #0c1018; border: 1px solid #1e293b; border-radius: 12px; padding: 20px; margin-top: 12px; }
+  .sim-controls { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+  .sim-btn { padding: 7px 14px; border: 1px solid #334155; background: #1e293b; color: #e2e8f0; border-radius: 8px; cursor: pointer; font-size: 0.78rem; font-weight: 600; transition: all 0.2s; }
+  .sim-btn:hover { background: #334155; }
+  .vector-grid { display: flex; gap: 10px; flex-wrap: wrap; }
+  .vector-node { width: 155px; border-radius: 10px; padding: 12px; border: 2px solid #1e293b; background: #131827; transition: all 0.4s; position: relative; }
+  .vector-node .name { font-size: 0.78rem; font-weight: 700; margin-bottom: 3px; }
+  .vector-node .fact { font-size: 0.74rem; color: #cbd5e1; margin-bottom: 6px; }
+  .vector-node .conf-bar { height: 5px; background: #1e293b; border-radius: 3px; overflow: hidden; margin-bottom: 3px; }
+  .vector-node .conf-fill { height: 100%; border-radius: 3px; transition: width 0.8s; }
+  .vector-node .conf-text { font-size: 0.68rem; color: #64748b; }
+  .vector-node .status { position: absolute; top: 7px; right: 7px; width: 7px; height: 7px; border-radius: 50%; }
+  .sim-log { margin-top: 12px; padding: 12px; background: #0a0e1a; border-radius: 8px; font-family: monospace; font-size: 0.74rem; color: #475569; max-height: 180px; overflow-y: auto; }
+  .sim-log .entry.consolidation { color: #a78bfa; } .sim-log .entry.update { color: #38bdf8; }
+  .sim-log .entry.decay { color: #f472b6; } .sim-log .entry.ripple { color: #fbbf24; }
+
+  /* Metadata table */
+  .metadata-table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+  .metadata-table th, .metadata-table td { padding: 7px 10px; text-align: left; font-size: 0.8rem; border-bottom: 1px solid #1e293b; }
+  .metadata-table th { color: #64748b; font-weight: 600; }
+  .metadata-table td { color: #e2e8f0; }
+  .metadata-table .field { color: #a5f3fc; font-family: monospace; }
+  .check { color: #4ade80; }
+
+  .section-label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; color: #475569; margin-bottom: 8px; font-weight: 700; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Smart Vector Theory</h1>
+  <p>Self-Evolving Knowledge Embeddings — Full Proposal with Implementation Details</p>
+</div>
+
+<div class="container">
+  <div class="tabs">
+    <div class="tab active" onclick="showTab('problem')">Problem</div>
+    <div class="tab" onclick="showTab('properties')">3 Properties</div>
+    <div class="tab" onclick="showTab('structure')">Data Structure</div>
+    <div class="tab" onclick="showTab('lifecycle')">5 Lifecycle Stages</div>
+    <div class="tab" onclick="showTab('impl-confidence')">Impl: Confidence</div>
+    <div class="tab" onclick="showTab('impl-consolidation')">Impl: Consolidation</div>
+    <div class="tab" onclick="showTab('impl-retrieval')">Impl: Retrieval</div>
+    <div class="tab" onclick="showTab('simulation')">Live Simulation</div>
+    <div class="tab" onclick="showTab('roadmap')">Roadmap</div>
+  </div>
+
+  <!-- ===== PROBLEM ===== -->
+  <div id="panel-problem" class="panel active">
+    <div class="card">
+      <h3>The Fundamental Problem: Vectors Are Dead Artifacts</h3>
+      <p>Today's embeddings are frozen at creation. They don't know when they're stale, can't assess their own reliability, and have no awareness of how they relate to other knowledge. VersionRAG research shows standard RAG achieves only 58% accuracy on versioned queries. Our approach targets 90%+.</p>
+      <div class="comparison">
+        <div class="comp-card dumb">
+          <h4 style="color:#f87171;">Today: Dumb Vector</h4>
+          <p>A fixed array of 768 floats. Encodes semantic meaning at one frozen moment. No concept of time, confidence, or relationships. When source data changes, it doesn't know. Confidently wrong forever.</p>
+          <p style="margin-top:10px; color:#f87171; font-size:0.8rem;">float[768] — that's it. No lifecycle, no self-awareness.</p>
+        </div>
+        <div class="comp-card smart">
+          <h4 style="color:#4ade80;">Proposed: Smart Vector</h4>
+          <p>An embedding enriched with temporal awareness, confidence decay, and relational edges. Knows <em>when</em> it was valid, how confident it should be <em>right now</em>, and which vectors depend on it. Adapts or fades when the world changes.</p>
+          <p style="margin-top:10px; color:#4ade80; font-size:0.8rem;">semantic[768] + temporal[64] + confidence engine + graph edges</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 3 PROPERTIES ===== -->
+  <div id="panel-properties" class="panel">
+    <div class="card"><h3>Three Properties That Make a Vector "Smart"</h3></div>
+    <div class="prop-grid">
+      <div class="prop-card p1">
+        <div class="icon">1</div>
+        <h4 style="color:#38bdf8;">Temporal Awareness</h4>
+        <p>Time is encoded in the vector space itself, not just as external metadata. Queries naturally surface recent, temporally valid results. Vectors with expired validity windows score near-zero.</p>
+        <div class="research"><strong>Research:</strong> DE-SimplE, ATiSE, PTBox — temporal KG embeddings. LiveVectorLake (2026) for streaming temporal retrieval.</div>
+      </div>
+      <div class="prop-card p2">
+        <div class="icon">2</div>
+        <h4 style="color:#a78bfa;">Confidence Decay</h4>
+        <p>Each vector carries a confidence score that decays over time (Ebbinghaus forgetting curve) but strengthens when users validate answers. Creates a self-tuning feedback loop. Dormant vectors are deprioritized, not deleted.</p>
+        <div class="research"><strong>Research:</strong> Neuroscience memory reconsolidation. MAGMA dual-stream consolidation. KDD 2025 uncertainty quantification survey.</div>
+      </div>
+      <div class="prop-card p3">
+        <div class="icon">3</div>
+        <h4 style="color:#fbbf24;">Relational Awareness</h4>
+        <p>Vectors maintain graph edges to dependents. When one changes, a ripple propagates — like GNN message passing. The "sky is blue" update triggers review of "atmospheric model uses blue baseline."</p>
+        <div class="research"><strong>Research:</strong> GNN message passing. MAGMA multi-graph memory. A-MEM agentic memory (2025).</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== DATA STRUCTURE ===== -->
+  <div id="panel-structure" class="panel">
+    <div class="card">
+      <h3>SmartVector Data Structure</h3>
+      <p>The complete data model for a self-aware embedding unit. Each field serves a specific purpose in the lifecycle.</p>
+      <pre class="code"><span class="dec">@dataclass</span>
+<span class="kw">class</span> <span class="cls">SmartVector</span>:
+
+    <span class="cm"># ── Identity ──</span>
+    <span class="fn">vector_id</span>: <span class="cls">str</span>          <span class="cm"># UUID, auto-generated</span>
+    <span class="fn">doc_id</span>: <span class="cls">str</span>             <span class="cm"># Parent document ID</span>
+    <span class="fn">doc_version</span>: <span class="cls">int</span>        <span class="cm"># Version of source document</span>
+    <span class="fn">chunk_index</span>: <span class="cls">int</span>        <span class="cm"># Position within the document</span>
+
+    <span class="cm"># ── Content ──</span>
+    <span class="fn">content</span>: <span class="cls">str</span>            <span class="cm"># Raw text of the chunk</span>
+    <span class="fn">content_hash</span>: <span class="cls">str</span>       <span class="cm"># MD5 hash for change detection</span>
+    <span class="fn">semantic_embedding</span>: <span class="cls">list[float]</span>  <span class="cm"># [768] Production: sentence-transformers</span>
+
+    <span class="cm"># ── Property 1: Temporal Awareness ──</span>
+    <span class="fn">created_at</span>: <span class="cls">datetime</span>
+    <span class="fn">updated_at</span>: <span class="cls">datetime</span>
+    <span class="fn">temporal_validity_start</span>: <span class="cls">datetime</span> <span class="op">|</span> <span class="cls">None</span>  <span class="cm"># Effective from</span>
+    <span class="fn">temporal_validity_end</span>: <span class="cls">datetime</span> <span class="op">|</span> <span class="cls">None</span>    <span class="cm"># Expires at (None=no expiry)</span>
+
+    <span class="cm"># ── Property 2: Confidence Decay ──</span>
+    <span class="fn">base_confidence</span>: <span class="cls">float</span>  <span class="cm"># 0.0-1.0, from SourceAuthority enum</span>
+    <span class="fn">access_count</span>: <span class="cls">int</span>       <span class="cm"># Times retrieved by queries</span>
+    <span class="fn">positive_feedback</span>: <span class="cls">int</span>  <span class="cm"># User accepted the answer</span>
+    <span class="fn">negative_feedback</span>: <span class="cls">int</span>  <span class="cm"># User corrected the answer</span>
+    <span class="fn">last_validated</span>: <span class="cls">datetime</span> <span class="op">|</span> <span class="cls">None</span>  <span class="cm"># Last human confirmation</span>
+    <span class="fn">half_life_days</span>: <span class="cls">float</span>  <span class="cm"># Confidence decay rate (default: 30)</span>
+
+    <span class="cm"># ── Property 3: Relational Awareness ──</span>
+    <span class="fn">depends_on</span>: <span class="cls">list[str]</span>      <span class="cm"># Vector IDs this references</span>
+    <span class="fn">depended_by</span>: <span class="cls">list[str]</span>     <span class="cm"># Vector IDs referencing this</span>
+    <span class="fn">supersedes</span>: <span class="cls">str</span> <span class="op">|</span> <span class="cls">None</span>     <span class="cm"># ID of older version replaced</span>
+    <span class="fn">superseded_by</span>: <span class="cls">str</span> <span class="op">|</span> <span class="cls">None</span>  <span class="cm"># ID of newer version replacing this</span>
+    <span class="fn">contradictions</span>: <span class="cls">list[str]</span>  <span class="cm"># IDs of conflicting vectors</span>
+
+    <span class="cm"># ── Lifecycle ──</span>
+    <span class="fn">status</span>: <span class="cls">VectorStatus</span>  <span class="cm"># UNCONSOLIDATED → ACTIVE → DORMANT → DEPRECATED → ARCHIVED</span>
+    <span class="fn">source_offset_start</span>: <span class="cls">int</span>  <span class="cm"># Character position in source doc (for surgical updates)</span>
+    <span class="fn">source_offset_end</span>: <span class="cls">int</span>
+</pre>
+      <p style="margin-top: 12px;"><strong>Source Authority Hierarchy</strong> — determines initial <code>base_confidence</code>:</p>
+      <pre class="code"><span class="kw">class</span> <span class="cls">SourceAuthority</span>(<span class="cls">Enum</span>):
+    OFFICIAL_DB   = <span class="num">0.95</span>   <span class="cm"># Company database, CRM, ERP</span>
+    POLICY_DOC    = <span class="num">0.90</span>   <span class="cm"># HR policies, compliance docs</span>
+    TECHNICAL_DOC = <span class="num">0.85</span>   <span class="cm"># Specifications, API docs</span>
+    WIKI          = <span class="num">0.75</span>   <span class="cm"># Internal wiki, Confluence</span>
+    EMAIL         = <span class="num">0.50</span>   <span class="cm"># Email communications</span>
+    MEETING_NOTES = <span class="num">0.45</span>   <span class="cm"># Meeting transcripts</span>
+    SLACK         = <span class="num">0.30</span>   <span class="cm"># Chat messages</span>
+    UNKNOWN       = <span class="num">0.20</span>   <span class="cm"># Unclassified source</span></pre>
+    </div>
+  </div>
+
+  <!-- ===== LIFECYCLE ===== -->
+  <div id="panel-lifecycle" class="panel">
+    <div class="card">
+      <h3>Five-Stage Lifecycle (Inspired by Neuroscience)</h3>
+      <p>Mirrors the brain's memory consolidation: hippocampal fast-write → sleep-time replay → reconsolidation → forgetting → schema update.</p>
+      <div style="margin-top:20px;">
+        <div class="lc-stage s1"><div class="lc-line"><div class="lc-dot">1</div><div class="lc-connector"></div></div><div class="lc-content"><h4 style="color:#38bdf8;">Encoding (Hippocampal Fast-Write)</h4><div class="sub">Status: UNCONSOLIDATED | Available immediately</div><p>New text is chunked with source-offset tracking, embedded, and inserted with status=UNCONSOLIDATED. Queryable immediately but not cross-referenced. Old versions auto-deprecated via doc_id+chunk_index matching. Relationship edges transferred from old→new.</p></div></div>
+        <div class="lc-stage s2"><div class="lc-line"><div class="lc-dot">2</div><div class="lc-connector"></div></div><div class="lc-content"><h4 style="color:#6366f1;">Consolidation (Sleep-Time Replay)</h4><div class="sub">Background cron job | Status: → ACTIVE</div><p>ConsolidationAgent runs periodically. Recalculates confidence for all vectors. Detects contradictions (same topic, different content). Builds relationship graph (depends_on, depended_by). Propagates ripples from recent changes. Marks unconsolidated→active.</p></div></div>
+        <div class="lc-stage s3"><div class="lc-line"><div class="lc-dot">3</div><div class="lc-connector"></div></div><div class="lc-content"><h4 style="color:#a78bfa;">Retrieval & Reinforcement (Reconsolidation)</h4><div class="sub">Every query modifies the vector's confidence</div><p>4-signal scoring: similarity + temporal + confidence + relational. When user accepts answer → positive_feedback++ (confidence boost). When user corrects → negative_feedback++ (confidence penalty). Every access slightly modifies the vector, just like memory reconsolidation.</p></div></div>
+        <div class="lc-stage s4"><div class="lc-line"><div class="lc-dot">4</div><div class="lc-connector"></div></div><div class="lc-content"><h4 style="color:#f472b6;">Decay & Forgetting</h4><div class="sub">Status: → DORMANT when confidence &lt; 15%</div><p>Exponential decay: C(t) = C₀ × 2^(-t/half_life). Vectors never accessed gradually lose confidence. Below threshold → DORMANT (still in DB, deprioritized). 180-day-old vector with no reinforcement → confidence drops to ~1%.</p></div></div>
+        <div class="lc-stage s5"><div class="lc-line"><div class="lc-dot">5</div></div><div class="lc-content"><h4 style="color:#fb923c;">Supersession & Archival</h4><div class="sub">Status: → DEPRECATED → ARCHIVED</div><p>When new version arrives, old is DEPRECATED. Confidence, edges, and relationships transfer to the new vector. Old vector archived for audit trail — not deleted. Knowledge evolves gracefully. Ripple propagator notifies all dependents of the change.</p></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== IMPL: CONFIDENCE ENGINE ===== -->
+  <div id="panel-impl-confidence" class="panel">
+    <div class="card">
+      <h3>Implementation: ConfidenceEngine</h3>
+      <p>The core algorithm that makes vectors self-aware of their own reliability. Combines time decay, user feedback, and access reinforcement.</p>
+    </div>
+
+    <div class="card">
+      <div class="section-label">Confidence Formula</div>
+      <p>Three factors combine to produce the current confidence at any moment in time:</p>
+      <pre class="code"><span class="cm"># Step 1: Exponential time decay (Ebbinghaus forgetting curve)</span>
+<span class="fn">decayed</span> = base_confidence × <span class="num">2</span><span class="op">^</span>(<span class="op">-</span>age_days / half_life_days)
+
+<span class="cm"># Step 2: User feedback adjustment (memory reconsolidation)</span>
+<span class="fn">adjusted</span> = decayed + (positive_count × <span class="num">0.03</span>) - (negative_count × <span class="num">0.08</span>)
+
+<span class="cm"># Step 3: Access reinforcement (frequently recalled = stronger)</span>
+<span class="fn">final</span> = adjusted + log(access_count + <span class="num">1</span>) × <span class="num">0.01</span>
+
+<span class="cm"># Result clamped to [0.01, 1.0]</span></pre>
+    </div>
+
+    <div class="card">
+      <div class="section-label">Full Implementation</div>
+      <pre class="code"><span class="kw">class</span> <span class="cls">ConfidenceEngine</span>:
+
+    <span class="kw">def</span> <span class="fn">__init__</span>(self,
+                 half_life_days=<span class="num">30.0</span>,           <span class="cm"># Confidence halves every 30 days</span>
+                 feedback_positive_boost=<span class="num">0.03</span>,   <span class="cm"># +3% per thumbs-up</span>
+                 feedback_negative_penalty=<span class="num">0.08</span>, <span class="cm"># -8% per correction</span>
+                 access_reinforcement=<span class="num">0.01</span>,      <span class="cm"># Small boost per access</span>
+                 dormant_threshold=<span class="num">0.15</span>):        <span class="cm"># Below 15% → dormant</span>
+        ...
+
+    <span class="kw">def</span> <span class="fn">compute_decay</span>(self, base_confidence, age_days):
+        <span class="str">"""Exponential decay: C(t) = C₀ × 2^(-t / half_life)"""</span>
+        <span class="kw">return</span> base_confidence <span class="op">*</span> (<span class="num">2</span> <span class="op">**</span> (<span class="op">-</span>age_days / self.half_life_days))
+
+    <span class="kw">def</span> <span class="fn">apply_feedback</span>(self, confidence, pos_count, neg_count):
+        <span class="str">"""Positive feedback strengthens, negative weakens."""</span>
+        boost = pos_count <span class="op">*</span> self.feedback_positive_boost
+        penalty = neg_count <span class="op">*</span> self.feedback_negative_penalty
+        <span class="kw">return</span> clamp(confidence + boost - penalty, <span class="num">0.01</span>, <span class="num">1.0</span>)
+
+    <span class="kw">def</span> <span class="fn">apply_access_reinforcement</span>(self, confidence, access_count):
+        <span class="str">"""Diminishing returns: log(accesses) × 0.01"""</span>
+        reinforcement = math.log(access_count + <span class="num">1</span>) <span class="op">*</span> self.access_reinforcement
+        <span class="kw">return</span> min(<span class="num">1.0</span>, confidence + reinforcement)
+
+    <span class="kw">def</span> <span class="fn">compute_current_confidence</span>(self, vector, reference_time):
+        <span class="str">"""Full pipeline: decay → feedback → reinforcement"""</span>
+        age = (reference_time - vector.created_at).days
+        decayed  = self.<span class="fn">compute_decay</span>(vector.base_confidence, age)
+        adjusted = self.<span class="fn">apply_feedback</span>(decayed, vector.positive_feedback,
+                                                    vector.negative_feedback)
+        final    = self.<span class="fn">apply_access_reinforcement</span>(adjusted, vector.access_count)
+        <span class="kw">return</span> round(final, <span class="num">4</span>)
+
+    <span class="kw">def</span> <span class="fn">should_go_dormant</span>(self, confidence):
+        <span class="kw">return</span> confidence <span class="op">&lt;</span> self.dormant_threshold</pre>
+    </div>
+
+    <div class="card">
+      <div class="section-label">Confidence Decay Over Time (Example)</div>
+      <p>A vector with base_confidence=0.85 and no user interaction:</p>
+      <div id="decay-chart" style="display:flex; align-items:flex-end; gap:3px; height:120px; margin:16px 0; padding: 8px 0;"></div>
+      <p style="font-size:0.78rem; color:#475569;">Day 0: 85% → Day 30: 42% → Day 60: 21% → Day 90: 11% (DORMANT) → Day 180: 1%</p>
+    </div>
+  </div>
+
+  <!-- ===== IMPL: CONSOLIDATION ===== -->
+  <div id="panel-impl-consolidation" class="panel">
+    <div class="card">
+      <h3>Implementation: ConsolidationAgent</h3>
+      <p>The background "sleep-time" process. Four sub-engines work together.</p>
+    </div>
+
+    <div class="card">
+      <div class="section-label">System Architecture</div>
+      <div class="arch-box"><span class="h">┌─────────────────────────────────────────────────────────────────┐</span>
+<span class="h">│                    ConsolidationAgent                           │</span>
+<span class="h">│                 (runs periodically as cron)                     │</span>
+<span class="h">├─────────┬───────────────┬──────────────┬────────────────────────┤</span>
+│         │               │              │                        │
+│ <span class="c">Conflict</span>    │ <span class="a">Relationship</span>    │ <span class="w">Ripple</span>         │ <span class="fn">Confidence</span>             │
+│ <span class="c">Detector</span>    │ <span class="a">Builder</span>         │ <span class="w">Propagator</span>     │ <span class="fn">Engine</span>                 │
+│         │               │              │                        │
+│ Finds   │ Discovers     │ Propagates   │ Recalculates           │
+│ contra- │ depends_on/   │ changes to   │ decay + feedback       │
+│ dictions│ depended_by   │ dependent    │ for all vectors        │
+│ between │ edges via     │ vectors via  │                        │
+│ vectors │ content sim   │ BFS with     │ Moves low-conf         │
+│         │ + doc lineage │ depth limit  │ vectors to DORMANT     │
+<span class="h">└─────────┴───────────────┴──────────────┴────────────────────────┘</span></div>
+    </div>
+
+    <div class="card">
+      <div class="section-label">ConflictDetector — Finds Contradictions</div>
+      <p>Groups vectors by topic similarity, then checks if high-topic-overlap pairs have low content similarity (same subject, different claims = contradiction).</p>
+      <pre class="code"><span class="kw">class</span> <span class="cls">ConflictDetector</span>:
+
+    <span class="kw">def</span> <span class="fn">detect_conflicts</span>(self, vectors, topic_threshold=<span class="num">0.3</span>,
+                         content_threshold=<span class="num">0.4</span>):
+        <span class="str">"""
+        High topic overlap + Low content similarity = CONTRADICTION
+        High topic overlap + High content similarity = REDUNDANCY
+        """</span>
+        <span class="kw">for</span> va, vb <span class="kw">in</span> all_active_pairs:
+            topic_sim   = jaccard(va.content, vb.content)
+            content_sim = sequence_similarity(va.content, vb.content)
+
+            <span class="kw">if</span> topic_sim <span class="op">></span> <span class="num">0.3</span> <span class="kw">and</span> content_sim <span class="op">&lt;</span> <span class="num">0.4</span>:
+                <span class="cm"># Contradiction! Resolve by: recency → authority → feedback</span>
+                winner = self.<span class="fn">_resolve_conflict</span>(va, vb)
+
+    <span class="kw">def</span> <span class="fn">_resolve_conflict</span>(self, va, vb):
+        <span class="str">"""Majority vote: recency_winner + authority_winner + feedback_winner"""</span>
+        recency_winner   = va <span class="kw">if</span> va.created_at <span class="op">></span> vb.created_at <span class="kw">else</span> vb
+        authority_winner  = va <span class="kw">if</span> va.base_confidence <span class="op">></span> vb.base_confidence <span class="kw">else</span> vb
+        feedback_winner   = va <span class="kw">if</span> va.feedback_ratio <span class="op">></span> vb.feedback_ratio <span class="kw">else</span> vb
+        <span class="kw">return</span> majority_vote([recency_winner, authority_winner, feedback_winner])</pre>
+    </div>
+
+    <div class="card">
+      <div class="section-label">RipplePropagator — GNN-Inspired Update Propagation</div>
+      <p>When a vector changes, BFS traversal notifies all dependents within <code>max_depth=2</code> hops. Each hop reduces the confidence penalty (signal attenuates with distance).</p>
+      <pre class="code"><span class="kw">class</span> <span class="cls">RipplePropagator</span>:
+
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, penalty_per_hop=<span class="num">0.15</span>, max_depth=<span class="num">2</span>):
+        ...
+
+    <span class="kw">def</span> <span class="fn">propagate</span>(self, changed_vector_id, all_vectors):
+        <span class="str">"""BFS from changed vector through depended_by edges."""</span>
+        visited = set()
+        self.<span class="fn">_propagate_recursive</span>(changed_vector_id, depth=<span class="num">0</span>)
+
+    <span class="kw">def</span> <span class="fn">_propagate_recursive</span>(self, vector_id, depth):
+        <span class="kw">if</span> depth <span class="op">>=</span> self.max_depth:
+            <span class="kw">return</span>  <span class="cm"># Stop cascade</span>
+
+        <span class="kw">for</span> dep_id <span class="kw">in</span> vector.depended_by:
+            <span class="cm"># Signal attenuates: penalty × (1 / (depth+1))</span>
+            penalty = <span class="num">0.15</span> <span class="op">*</span> (<span class="num">1.0</span> / (depth + <span class="num">1</span>))
+            dependent.base_confidence <span class="op">-=</span> penalty
+            dependent.contradictions.append(changed_id)  <span class="cm"># Flag for review</span>
+
+            <span class="cm"># Continue to next hop</span>
+            self.<span class="fn">_propagate_recursive</span>(dep_id, depth + <span class="num">1</span>)
+
+<span class="cm"># Example: "sky is blue" → updated → "sky is yellow"
+#   Hop 0: "sky-color" vector updated
+#   Hop 1: "atmo-model uses blue baseline" → confidence -15%, flagged
+#   Hop 2: "sensor calibration uses atmo-model" → confidence -7.5%, flagged</span></pre>
+    </div>
+
+    <div class="card">
+      <div class="section-label">Consolidation Orchestration — Full Cycle</div>
+      <pre class="code"><span class="kw">class</span> <span class="cls">ConsolidationAgent</span>:
+
+    <span class="kw">def</span> <span class="fn">run_consolidation</span>(self, vectors, recent_changes):
+        <span class="str">"""Run one full consolidation cycle (call via cron)."""</span>
+
+        <span class="cm"># 1. Recalculate confidence for all active vectors</span>
+        <span class="kw">for</span> vec <span class="kw">in</span> active_vectors:
+            new_conf = confidence_engine.<span class="fn">compute_current_confidence</span>(vec)
+            <span class="kw">if</span> new_conf <span class="op">&lt;</span> <span class="num">0.15</span>:
+                vec.status = DORMANT
+
+        <span class="cm"># 2. Detect contradictions between vectors</span>
+        conflicts = conflict_detector.<span class="fn">detect_conflicts</span>(vectors)
+        <span class="kw">for</span> conflict <span class="kw">in</span> conflicts:
+            mark_contradictions(conflict.va, conflict.vb)
+
+        <span class="cm"># 3. Build relationship graph edges</span>
+        relationships = relationship_builder.<span class="fn">build_relationships</span>(vectors)
+        relationship_builder.<span class="fn">apply_relationships</span>(vectors, relationships)
+
+        <span class="cm"># 4. Propagate ripples from recent changes</span>
+        <span class="kw">for</span> changed_id <span class="kw">in</span> recent_changes:
+            ripple_propagator.<span class="fn">propagate</span>(changed_id, vectors)
+
+        <span class="cm"># 5. Promote unconsolidated → active</span>
+        <span class="kw">for</span> vec <span class="kw">in</span> unconsolidated:
+            vec.status = ACTIVE</pre>
+    </div>
+  </div>
+
+  <!-- ===== IMPL: RETRIEVAL ===== -->
+  <div id="panel-impl-retrieval" class="panel">
+    <div class="card">
+      <h3>Implementation: SmartVectorDB Retrieval Pipeline</h3>
+      <p>The 4-signal scoring formula that replaces naive cosine similarity.</p>
+    </div>
+
+    <div class="card">
+      <div class="section-label">Retrieval Scoring Formula</div>
+      <pre class="code"><span class="fn">final_score</span> = <span class="num">0.35</span> × similarity       <span class="cm"># How relevant to the query</span>
+            + <span class="num">0.25</span> × temporal_score   <span class="cm"># How fresh (exponential decay)</span>
+            + <span class="num">0.25</span> × confidence       <span class="cm"># How trusted (decay + feedback)</span>
+            + <span class="num">0.15</span> × relational_bonus <span class="cm"># How well-connected</span></pre>
+      <p style="margin-top:12px;">Each signal is computed independently:</p>
+    </div>
+
+    <div class="card">
+      <div class="section-label">Signal 1: Semantic Similarity</div>
+      <pre class="code"><span class="cm"># POC: keyword overlap. Production: cosine(embed(query), embed(chunk))</span>
+<span class="fn">similarity</span> = len(query_words <span class="op">∩</span> content_words) / len(query_words)</pre>
+    </div>
+
+    <div class="card">
+      <div class="section-label">Signal 2: Temporal Score (with Validity Windows)</div>
+      <pre class="code"><span class="kw">def</span> <span class="fn">temporal_score</span>(vector, reference_time):
+    <span class="cm"># Check validity window first</span>
+    <span class="kw">if</span> vector.temporal_validity_end <span class="kw">and</span> reference_time <span class="op">></span> validity_end:
+        <span class="kw">return</span> <span class="num">0.05</span>  <span class="cm"># Expired knowledge → near-zero</span>
+
+    <span class="cm"># Exponential decay with 30-day half-life</span>
+    age_days = (reference_time - vector.created_at).days
+    <span class="kw">return</span> <span class="num">2</span> <span class="op">**</span> (<span class="op">-</span>age_days / <span class="num">30</span>)</pre>
+    </div>
+
+    <div class="card">
+      <div class="section-label">Signal 3: Confidence (Live Computation)</div>
+      <pre class="code"><span class="cm"># Calls ConfidenceEngine.compute_current_confidence(vector)</span>
+<span class="cm"># Combines: time_decay × feedback_adjustment × access_reinforcement</span>
+<span class="fn">confidence</span> = confidence_engine.<span class="fn">compute_current_confidence</span>(vector)</pre>
+    </div>
+
+    <div class="card">
+      <div class="section-label">Signal 4: Relational Bonus</div>
+      <pre class="code"><span class="kw">def</span> <span class="fn">relational_bonus</span>(vector):
+    <span class="str">"""Well-connected vectors are more integrated/reliable."""</span>
+    <span class="kw">if</span> vector.edge_count <span class="op">==</span> <span class="num">0</span>:
+        <span class="kw">return</span> <span class="num">0.0</span>
+    <span class="kw">return</span> min(<span class="num">0.3</span>, math.log(<span class="num">1</span> + vector.edge_count) <span class="op">*</span> <span class="num">0.1</span>)</pre>
+    </div>
+
+    <div class="card">
+      <div class="section-label">Surgical Update Pipeline (Scenario A Solution)</div>
+      <pre class="code"><span class="kw">def</span> <span class="fn">ingest_update</span>(self, doc_id, old_text, new_text, ...):
+    <span class="str">"""Change 1 word → re-embed 1 chunk (not 200)."""</span>
+
+    <span class="cm"># 1. Diff old vs new document</span>
+    changed_ranges = diff(old_text, new_text)
+
+    <span class="cm"># 2. Find affected vectors by source_offset overlap</span>
+    <span class="kw">for</span> change <span class="kw">in</span> changed_ranges:
+        affected = [v <span class="kw">for</span> v <span class="kw">in</span> vectors
+                    <span class="kw">if</span> v.doc_id <span class="op">==</span> doc_id
+                    <span class="kw">and</span> v.offset_start <span class="op">&lt;</span> change.end
+                    <span class="kw">and</span> v.offset_end <span class="op">></span> change.start]
+
+    <span class="cm"># 3. For each affected: deprecate old, create new</span>
+    <span class="kw">for</span> old_vec <span class="kw">in</span> affected:
+        old_vec.status = DEPRECATED
+        new_vec = create_replacement(old_vec, new_text)
+        new_vec.supersedes = old_vec.id
+        new_vec.depends_on = old_vec.depends_on  <span class="cm"># Transfer edges</span>
+        new_vec.depended_by = old_vec.depended_by
+
+    <span class="cm"># 4. Queue for ripple propagation</span>
+    recent_changes.extend(new_vector_ids)</pre>
+    </div>
+
+    <div class="card">
+      <div class="section-label">LLM Context Builder — What the AI Actually Sees</div>
+      <pre class="code"><span class="cm">=== SMART VECTOR RETRIEVAL CONTEXT ===
+INSTRUCTIONS:
+- Documents ranked by relevance + recency + confidence + relational importance
+- Confidence reflects source authority, age decay, and user feedback history
+- If conflict warnings present, prefer higher-confidence source
+- Always cite source, version, and date
+
+── Document 1 ──
+Source: engineering_wiki | Author: alice_v2
+Version: v2 | Status: active
+Created: 2026-04-17 14:30
+Scores: similarity=0.625, temporal=1.00, confidence=0.90, relational=0.069
+FINAL: 0.694
+Edges: 2 | Accesses: 5 | Feedback: +4/-0
+
+Section 1: The sky color calibration uses a yellow baseline for
+atmospheric modeling. All sensors are calibrated quarterly.
+
+── Document 2 ──
+  ⚠ Conflicts with V:a84aa643 ("...blue baseline...")
+Source: slack_engineering | Author: intern_bob
+Version: v1 | Status: active
+Created: 2026-04-12 09:00
+Scores: similarity=0.500, temporal=0.891, confidence=0.267, relational=0.0
+FINAL: 0.464
+Edges: 0 | Accesses: 1 | Feedback: +1/-0
+
+I heard the sky calibration is switching to yellow baseline next quarter.</span></pre>
+    </div>
+  </div>
+
+  <!-- ===== SIMULATION ===== -->
+  <div id="panel-simulation" class="panel">
+    <div class="card">
+      <h3>Live Simulation: Watch Smart Vectors Evolve</h3>
+      <p>Click buttons to trigger lifecycle events and observe confidence, relationships, and states change in real time.</p>
+    </div>
+    <div class="sim-area">
+      <div class="sim-controls">
+        <button class="sim-btn" onclick="simIngest()">1. Ingest 3 Docs</button>
+        <button class="sim-btn" onclick="simConsolidate()">2. Consolidate</button>
+        <button class="sim-btn" onclick="simQuery()">3. Query + Accept</button>
+        <button class="sim-btn" onclick="simUpdate()">4. Update "sky→yellow"</button>
+        <button class="sim-btn" onclick="simRipple()">5. Ripple to Dependents</button>
+        <button class="sim-btn" onclick="simDecay()">6. Time Passes</button>
+        <button class="sim-btn" onclick="simReset()">Reset</button>
+      </div>
+      <div id="vector-display" class="vector-grid"></div>
+      <div id="sim-log" class="sim-log"><div class="entry">Ready. Click "Ingest 3 Docs" to begin the full lifecycle.</div></div>
+    </div>
+  </div>
+
+  <!-- ===== ROADMAP ===== -->
+  <div id="panel-roadmap" class="panel">
+    <div class="card"><h3>Implementation Roadmap: Three Phases</h3></div>
+    <div class="roadmap">
+      <div class="phase p1">
+        <h4 style="color:#4ade80;">Phase 1: Smart Metadata</h4>
+        <div class="timeline">3-6 months | Production-ready</div>
+        <p>Build on existing vector DBs. Augment with confidence scores, feedback loops, relationship tracking. Decay function as cron job. This is the POC code — already implemented and tested.</p>
+        <div class="tools">Tools: Any vector DB + PostgreSQL + pgai Vectorizer</div>
+      </div>
+      <div class="phase p2">
+        <h4 style="color:#fbbf24;">Phase 2: Temporal Embeddings</h4>
+        <div class="timeline">6-12 months | R&D</div>
+        <p>Fine-tune embedding model to encode time in vector space. Train on (old_version, new_version) document pairs. Use Matryoshka architecture for adaptive dimensions.</p>
+        <div class="tools">Tools: sentence-transformers + custom temporal loss + version history</div>
+      </div>
+      <div class="phase p3">
+        <h4 style="color:#f472b6;">Phase 3: Self-Evolving Graph</h4>
+        <div class="timeline">12-24 months | Research frontier</div>
+        <p>Full GNN-inspired propagation. LLM arbiter agent for conflict resolution. Background consolidation (MAGMA-style). The vector DB becomes a living knowledge organism.</p>
+        <div class="tools">Tools: Neo4j + GNN + LLM arbiter + MAGMA dual-stream</div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:16px;">
+      <div class="section-label">Key References</div>
+      <table class="metadata-table">
+        <thead><tr><th>Paper / Tool</th><th>Contribution</th></tr></thead>
+        <tbody>
+          <tr><td class="field">VersionRAG (arXiv 2510.08109)</td><td>90% accuracy on versioned queries vs 58% for standard RAG</td></tr>
+          <tr><td class="field">MAGMA (arXiv 2601.03236)</td><td>Dual-stream: fast ingestion + slow consolidation architecture</td></tr>
+          <tr><td class="field">LiveVectorLake (arXiv 2601.05270)</td><td>Streaming vector updates with temporal retrieval</td></tr>
+          <tr><td class="field">A-MEM (arXiv 2502.12110)</td><td>Agentic self-organizing memory for LLM agents</td></tr>
+          <tr><td class="field">DE-SimplE / ATiSE / PTBox</td><td>Temporal knowledge graph embeddings encoding time in vector space</td></tr>
+          <tr><td class="field">Matryoshka (NeurIPS 2022)</td><td>Adaptive-dimension embeddings for flexible retrieval</td></tr>
+          <tr><td class="field">LanceDB Time-Travel</td><td>Zero-cost snapshots, instant rollback, audit trail</td></tr>
+          <tr><td class="field">pgai Vectorizer (Timescale)</td><td>Auto-sync embeddings when PostgreSQL source changes</td></tr>
+          <tr><td class="field">Neuroscience: Consolidation (NIH)</td><td>Hippocampal fast-write + neocortical integration model</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+function showTab(id) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('panel-' + id).classList.add('active');
+  event.target.classList.add('active');
+}
+
+// Decay chart
+(function drawDecayChart() {
+  const el = document.getElementById('decay-chart');
+  if (!el) return;
+  const days = [0,5,10,15,20,30,45,60,75,90,120,150,180];
+  const base = 0.85;
+  days.forEach(d => {
+    const conf = base * Math.pow(2, -d/30);
+    const pct = Math.max(1, conf * 100);
+    const color = pct > 50 ? '#4ade80' : pct > 15 ? '#fbbf24' : '#f87171';
+    const bar = document.createElement('div');
+    bar.style.cssText = `width:${100/days.length - 1}%; height:${pct}%; background:${color}; border-radius:3px 3px 0 0; position:relative; min-width:20px;`;
+    bar.title = `Day ${d}: ${pct.toFixed(0)}%`;
+    const label = document.createElement('div');
+    label.style.cssText = 'position:absolute; bottom:-18px; left:50%; transform:translateX(-50%); font-size:0.65rem; color:#475569; white-space:nowrap;';
+    label.textContent = `d${d}`;
+    bar.appendChild(label);
+    const val = document.createElement('div');
+    val.style.cssText = 'position:absolute; top:-16px; left:50%; transform:translateX(-50%); font-size:0.65rem; color:#94a3b8; white-space:nowrap;';
+    val.textContent = `${pct.toFixed(0)}%`;
+    bar.appendChild(val);
+    el.appendChild(bar);
+  });
+})();
+
+// Simulation
+let vectors = {}, logEntries = [];
+function log(msg, type='') { logEntries.unshift({msg,type}); const el=document.getElementById('sim-log'); el.innerHTML=logEntries.slice(0,25).map(e=>`<div class="entry ${e.type}">${e.msg}</div>`).join(''); }
+function renderVectors() { const el=document.getElementById('vector-display'); el.innerHTML=Object.values(vectors).map(v=>{ const cc=v.confidence>0.7?'#4ade80':v.confidence>0.4?'#fbbf24':'#f87171'; const sc=v.status==='active'?'#4ade80':v.status==='dormant'?'#64748b':'#f87171'; const op=v.status==='deprecated'?'0.3':v.status==='dormant'?'0.55':'1'; return `<div class="vector-node" style="opacity:${op};border-color:${v.status==='active'?cc:'#334155'};"><div class="status" style="background:${sc};"></div><div class="name" style="color:${cc};">${v.name}</div><div class="fact">${v.fact}</div><div class="conf-bar"><div class="conf-fill" style="width:${v.confidence*100}%;background:${cc};"></div></div><div class="conf-text">Conf: ${(v.confidence*100).toFixed(0)}% | ${v.status}</div><div class="conf-text">Accessed: ${v.accesses}x | Edges: ${v.edges.length}</div></div>`; }).join(''); }
+function simReset() { vectors={}; logEntries=[]; document.getElementById('vector-display').innerHTML=''; document.getElementById('sim-log').innerHTML='<div class="entry">Reset.</div>'; }
+function simIngest() { vectors={'sky-blue':{id:'sky-blue',name:'V1: Sky Color',fact:'"sky is blue"',confidence:0.85,status:'unconsolidated',accesses:0,edges:[],age:0},'atmo-model':{id:'atmo-model',name:'V2: Atmo Model',fact:'"uses blue baseline"',confidence:0.80,status:'unconsolidated',accesses:0,edges:[],age:0},'pricing':{id:'pricing',name:'V3: Pricing',fact:'"Enterprise $99/mo"',confidence:0.90,status:'unconsolidated',accesses:0,edges:[],age:0},'hr-policy':{id:'hr-policy',name:'V4: HR Policy',fact:'"3 days in-office"',confidence:0.95,status:'unconsolidated',accesses:0,edges:[],age:0}}; log('STAGE 1 ENCODING: Ingested 4 vectors (all UNCONSOLIDATED)','update'); renderVectors(); }
+function simConsolidate() { if(!vectors['sky-blue']){log('Ingest first.');return;} vectors['atmo-model'].edges=['sky-blue']; vectors['sky-blue'].edges=['atmo-model']; Object.values(vectors).forEach(v=>{if(v.status==='unconsolidated')v.status='active';}); log('STAGE 2 CONSOLIDATION: Found dependency atmo-model→sky-blue','consolidation'); log('STAGE 2 CONSOLIDATION: All vectors → ACTIVE','consolidation'); renderVectors(); }
+function simQuery() { if(!vectors['sky-blue']){log('Ingest first.');return;} const t=vectors['sky-blue'].status==='deprecated'&&vectors['sky-yellow']?'sky-yellow':'sky-blue'; vectors[t].accesses++; vectors[t].confidence=Math.min(1,vectors[t].confidence+0.03); log(`STAGE 3 RETRIEVAL: "${vectors[t].fact}" → user accepted → conf +3%`,'update'); renderVectors(); }
+function simUpdate() { if(!vectors['sky-blue']){log('Ingest first.');return;} vectors['sky-blue'].status='deprecated'; vectors['sky-blue'].confidence=0; vectors['sky-yellow']={id:'sky-yellow',name:'V5: Sky Color v2',fact:'"sky is yellow"',confidence:0.90,status:'active',accesses:0,edges:['atmo-model'],age:0}; log('STAGE 4 UPDATE: V1 DEPRECATED, V5 inserted with conf=0.90','update'); log('SUPERSESSION: V5.supersedes=V1, edges transferred','update'); renderVectors(); }
+function simRipple() { if(!vectors['sky-yellow']){log('Run Update first.');return;} vectors['atmo-model'].confidence=Math.max(0.05,vectors['atmo-model'].confidence-0.15); vectors['atmo-model'].edges=['sky-yellow']; log('RIPPLE hop 1: sky-yellow change → atmo-model conf -15%','ripple'); log('RIPPLE: atmo-model flagged for review (dependent fact changed)','ripple'); renderVectors(); }
+function simDecay() { Object.values(vectors).forEach(v=>{ if(v.status==='active'||v.status==='unconsolidated'){ v.confidence=Math.max(0.05,v.confidence-0.08); v.age++; if(v.confidence<0.15){v.status='dormant'; log(`STAGE 5 DECAY: ${v.name} → DORMANT (conf<15%)`,'decay');} else log(`DECAY: ${v.name} conf → ${(v.confidence*100).toFixed(0)}%`,'decay'); }}); renderVectors(); }
+</script>
+</body>
+</html>
