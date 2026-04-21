@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "smartvector-rag"
-version = "0.1.0"
+version = "0.1.1"
 description = "Self-aware vector embeddings with temporal awareness, confidence decay, and relational intelligence for RAG systems"
 readme = "README.md"
 license = {text = "MIT"}
@@ -43,9 +43,9 @@ embeddings = [
 smartvector = "smartvector.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/xunaizhong/smartvector"
-Repository = "https://github.com/xunaizhong/smartvector"
-Issues = "https://github.com/xunaizhong/smartvector/issues"
+Homepage = "https://github.com/naizhong/smartvector"
+Repository = "https://github.com/naizhong/smartvector"
+Issues = "https://github.com/naizhong/smartvector/issues"
 
 [tool.setuptools.packages.find]
 where = ["src"]

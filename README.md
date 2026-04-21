@@ -27,7 +27,7 @@ pip install smartvector-rag
 Or install from source:
 
 ```bash
-git clone https://github.com/xunaizhong/smartvector.git
+git clone https://github.com/naizhong/smartvector.git
 cd smartvector
 pip install -e ".[dev]"
 ```
